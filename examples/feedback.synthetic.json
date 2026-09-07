@@ -1,0 +1,32 @@
+{
+  "batch_id": "synthetic-demo-001",
+  "game_name": "示例游戏（虚构）",
+  "source_description": "人工构造的开发样例，不对应真实游戏或玩家",
+  "imported_at": null,
+  "reviews": [
+    {
+      "review_id": "demo-001",
+      "text": "更新后进入地图就闪退，重装后仍然存在。",
+      "source_url": null,
+      "created_at": null,
+      "language": "zh-CN",
+      "recommended": null
+    },
+    {
+      "review_id": "demo-002",
+      "text": "希望增加按键自定义。背包满了以后没有明显提醒，经常不知道为什么捡不了东西。",
+      "source_url": null,
+      "created_at": null,
+      "language": "zh-CN",
+      "recommended": null
+    },
+    {
+      "review_id": "demo-003",
+      "text": "音乐很好听。",
+      "source_url": null,
+      "created_at": null,
+      "language": "zh-CN",
+      "recommended": null
+    }
+  ]
+}
