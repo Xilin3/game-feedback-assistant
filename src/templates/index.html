@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf }}">
+  <title>回声 · 游戏反馈工作台</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script defer src="{{ url_for('static', filename='app.js') }}"></script>
+</head>
+<body>
+<aside class="sidebar">
+  <a class="brand" href="/" aria-label="回声首页"><span class="logo">◒</span><span>回声<small>GAME FEEDBACK</small></span></a>
+  <button id="new-batch" class="primary wide">＋ 新建分析批次</button>
+  <p class="eyebrow">工作空间 <span> / </span> 批次记录</p>
+  <nav id="batch-list" aria-label="分析批次"></nav>
+  <div class="sidebar-foot"><span class="dot"></span> 本地工作空间<small>原始评论与复核记录保存在本机</small></div>
+</aside>
+<main>
+  <header><span>反馈工作台 <span class="muted"> / </span> <span id="breadcrumb">开始整理</span></span><button type="button" class="secondary" data-model-settings>AI 模型设置</button></header>
+  <section id="welcome">
+    <p class="eyebrow accent">从玩家声音，到下一步行动</p>
+    <h1>让每一条反馈，<br>都有据可循。</h1>
+    <p class="intro">把散落的评论整理成清晰的问题清单。找到重复反馈，<br>回到原文核实，再把结论交给团队。</p>
+    <div class="steps"><span><b>01</b> 导入评论</span><span>→</span><span><b>02</b> 提取与归组</span><span>→</span><span><b>03</b> 复核与导出</span></div>
+    <div class="tabs" role="group" aria-label="评论来源">
+      <button type="button" class="tab active" data-source="steam" aria-pressed="true">Steam API 获取</button>
+      <button type="button" class="tab" data-source="local" aria-pressed="false">文本 / JSON 导入</button>
+    </div>
+    <form id="import-form" class="panel import-panel hidden">
+      <div class="section-title"><div><h2>新建分析批次</h2><p>从一款游戏、一批评论开始。</p></div><button type="button" id="load-example" class="text-button">填入示例 ↗</button></div>
+      <div class="two-col"><label>游戏名称<input id="game-name" maxlength="200" placeholder="例如：星际远航" required></label><label>样本来源<input id="source" maxlength="2000" placeholder="例如：社区中文评论，2026 年 9 月" required></label></div>
+      <div class="tabs" role="group" aria-label="导入方式"><button type="button" class="tab active" data-mode="text">粘贴文本</button><button type="button" class="tab" data-mode="json">JSON 导入</button></div>
+      <label id="input-label" for="review-input">评论内容<span class="muted">每行一条评论，最多 1000 条</span></label>
+      <textarea id="review-input" rows="7" placeholder="更新后进入地图就闪退，重装后仍然存在。&#10;希望增加按键自定义。" required></textarea>
+      <label id="file-label" class="hidden file-label">选择 JSON 文件<input id="json-file" type="file" accept=".json,application/json"></label>
+      <label class="new-copy"><input id="force-new" type="checkbox"> 作为独立新批次导入，用于比较不同分析结果</label>
+      <div class="form-bottom"><span class="muted">保留完整原文 · 自动检查重复 ID</span><button class="primary" type="submit">创建批次 →</button></div>
+    </form>
+    <form id="steam-form" class="panel import-panel">
+      <div class="section-title"><div><h2>获取 Steam 真实评论</h2><p>直接导入公开评论，保留原文、推荐状态、时间与来源。</p></div></div>
+      <div class="two-col"><label>Steam App ID 或商店链接<input id="steam-appid" placeholder="https://store.steampowered.com/app/…" required></label><label>游戏名称（可选）<input id="steam-name" maxlength="200" placeholder="未填写时使用 App ID 标识"></label></div>
+      <div class="two-col steam-options"><label>获取数量<input id="steam-count" type="number" min="1" max="1000" value="300" required></label><label>评论语言<select id="steam-language"><option value="schinese">简体中文</option><option value="tchinese">繁体中文</option><option value="english">英语</option><option value="all">全部语言</option></select></label><label>好差评筛选<select id="steam-type"><option value="all">全部</option><option value="negative">仅差评</option><option value="positive">仅好评</option></select></label></div>
+      <label class="new-copy"><input id="steam-refresh" type="checkbox"> 重新从 Steam 获取（默认复用一小时内的缓存）</label>
+      <p class="muted">按创建时间从新到旧，全部购买来源，排除 Steam 标记的离题评论。不是随机样本；评论不足时保留实际数量。</p>
+      <div class="form-bottom"><span id="steam-progress" class="muted" role="status">无需 Steam 登录或 API 密钥</span><button id="steam-submit" class="primary">获取并创建批次 →</button></div>
+    </form>
+    <p class="footnote">分析结果需要人工复核。样本中的数量与占比不代表所有玩家。</p>
+  </section>
+  <section id="workspace" class="hidden">
+    <div class="workspace-heading"><div><p class="eyebrow accent">FEEDBACK OVERVIEW</p><h1 id="batch-title"></h1><p id="batch-source" class="muted"></p></div><a id="export" class="button secondary">↓ 导出报告</a></div>
+    <div class="stats"><div><span>导入评论</span><strong id="stat-total">0</strong><small>本批次有效样本</small></div><div><span>问题分组</span><strong id="stat-groups">0</strong><small>不含已排除内容</small></div><div><span>已完成分析</span><strong id="stat-done">0</strong><small id="stat-progress"></small></div><div><span>人工已确认</span><strong id="stat-confirmed">0</strong><small>复核后再形成结论</small></div></div>
+    <div class="analysis-bar panel"><div><h3 id="analysis-label">准备分析</h3><p id="analysis-help">选择分析模式，开始提取问题。</p></div><div class="inline"><select id="provider" hidden aria-label="分析模式"><option value="demo">离线演示（规则）</option><option value="compatible">大模型分析</option></select><div class="provider-options" role="group" aria-label="选择分析模式"><button type="button" data-provider="compatible" aria-pressed="false">真实 AI 分析</button><button type="button" data-provider="demo" aria-pressed="true" class="active">离线演示（规则）</button></div><button id="analyze" class="primary">开始分析 →</button></div></div>
+    <p class="notice" id="mode-notice">离线演示只识别少量预设表达，用于体验流程，不能代替 AI 分析。</p>
+    <p class="muted"><span id="model-status">读取模型配置…</span> <button type="button" class="text-button" data-model-settings>配置 AI 模型 ↗</button></p>
+    <div class="results-layout"><section class="panel groups-panel"><div class="section-title"><h2>问题清单</h2><span class="muted" id="group-count"></span></div><div class="filters"><input id="search" type="search" placeholder="搜索问题或原文" aria-label="搜索问题或原文"><select id="state-filter" aria-label="复核状态"><option value="all">全部状态</option><option value="pending">待复核</option><option value="confirmed">已确认</option><option value="insufficient">信息不足</option><option value="excluded">已排除</option></select></div><div id="group-list"></div><div class="merge-bar"><span class="muted">勾选多个分组进行合并</span><button id="merge" class="secondary" disabled>合并所选</button></div></section>
+    <section id="detail" class="panel detail-panel" aria-label="问题详情"></section></div>
+    <p class="footnote">每组按评论 ID 去重计数。一条评论可包含多个问题，各组数量之和可能超过评论总数。 <a id="source-export">下载原始评论 JSON ↓</a></p>
+    <details class="panel records"><summary>原始评论与分析状态 <span id="review-count"></span></summary><div id="reviews"></div></details>
+    <details class="panel records"><summary>人工修正记录</summary><div id="audit"></div></details>
+  </section>
+</main>
+<div id="toast" role="status" class="hidden"></div>
+<dialog id="model-dialog" aria-labelledby="model-dialog-title">
+  <form id="model-form">
+    <h2 id="model-dialog-title">AI 模型设置</h2>
+    <p class="muted">保存后立即用于新的分析请求，无需重启。正在运行的分析继续使用启动时的配置。</p>
+    <label>API 地址<input id="model-base" type="url" placeholder="https://服务地址/v1" maxlength="2000" required></label>
+    <label>API 密钥<input id="model-key" type="password" autocomplete="new-password" placeholder="输入服务商 API Key" maxlength="8192"></label>
+    <p id="model-key-status" class="muted"></p>
+    <label>模型名称<input id="model-name" placeholder="填写服务商提供的模型 ID" maxlength="200" required></label>
+    <p class="muted">配置保存在本机 SQLite 数据库中，密钥未加密，不会回显或写入报告。更换服务地址时需要重新输入密钥。</p>
+    <p id="model-feedback" class="error-text" role="status"></p>
+    <div class="form-bottom"><button type="button" id="model-cancel" class="secondary">取消</button><button id="model-save" class="primary">保存配置</button></div>
+  </form>
+</dialog>
+<dialog id="split-dialog"><form id="split-form"><h2>拆分为新问题</h2><p class="muted">所选证据将移入新分组，原分组至少保留一项。</p><label>新分组标题<input id="split-title" required maxlength="500"></label><div class="form-bottom"><button type="button" id="cancel-split" class="secondary">取消</button><button class="primary">确认拆分</button></div></form></dialog>
+</body>
+</html>

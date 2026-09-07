@@ -15,8 +15,11 @@ build/
 *.sqlite
 *.sqlite3
 *.db
+*.sqlite3-wal
+*.sqlite3-shm
 data/private/
 data/raw/
 reports/generated/
 .DS_Store
 Thumbs.db
+.test-tmp/
